@@ -1,0 +1,100 @@
+    Başlangıç Kodu:
+Ne Yaptı:
+
+MutationObserver kullanarak DOM değişikliklerini gözlemledi ve video sayfasına geçildiğinde bir düğme ekledi.
+SPA navigasyonunu yönetmek için setInterval ile URL değişikliklerini izledi.
+Video sayfası (/watch) algılandığında, düğmeyi #top-level-buttons-computed içine ekledi.
+    Sorunlar:
+
+Erken Yükleme:
+Düğme bazen ana sayfadaki videoların altına veya yanlış yerlere ekleniyordu.
+Gecikmeli Görünme:
+Ana sayfadan bir video seçildiğinde düğme güvenilir şekilde görünmüyordu.
+Çakışan Gözlemciler:
+MutationObserver ve setInterval birlikte çalıştığında gereksiz tekrarlar oluşabiliyordu.
+SPA Zamanlaması:
+Düğme, YouTube'un asenkron DOM güncellemeleri nedeniyle bazen hiç yüklenmiyordu.
+    Yapılan Değişiklikler:
+1. Bağlam Farkındalığı Eklendi (isVideoPage):
+Neden: Düğmenin yalnızca video sayfalarında çalışmasını sağlamak için.
+Ne Yapıldı:
+javascript
+Kodu kopyala
+function isVideoPage() {
+  return location.pathname === '/watch';
+}
+Sonuç: Kod, yalnızca video sayfalarında çalışarak daha tutarlı hale geldi.
+2. Gecikme Eklendi (setTimeout):
+Neden: YouTube’un SPA yapısında DOM tam yüklenmeden düğme eklenmeye çalışıyordu.
+Ne Yapıldı:
+javascript
+Kodu kopyala
+setTimeout(() => {
+  waitForElement('#top-level-buttons-computed', initializeButton);
+}, 4000); // 4 saniyelik gecikme
+Sonuç: Düğme artık DOM tamamen yüklendikten sonra ekleniyor.
+3. Geliştirilmiş waitForElement Fonksiyonu:
+Neden: Hedef DOM elemanlarının tam olarak mevcut olduğundan emin olmak için.
+Ne Yapıldı:
+javascript
+Kodu kopyala
+function waitForElement(selector, callback, delay = 100) {
+  const interval = setInterval(() => {
+    const element = document.querySelector(selector);
+    if (element) {
+      clearInterval(interval);
+      callback();
+    }
+  }, delay); // Belirli aralıklarla kontrol et
+}
+Sonuç: Kod, eleman mevcut olduğunda güvenilir şekilde çalışmaya başladı.
+4. URL Değişikliklerini Daha Güvenilir İzleme:
+Neden: YouTube SPA yapısında kullanıcı URL değiştirirken DOM yüklenmesi zaman alabiliyordu.
+Ne Yapıldı:
+javascript
+Kodu kopyala
+setInterval(() => {
+  const currentUrl = location.href;
+  if (currentUrl !== lastUrl) {
+    lastUrl = currentUrl;
+    if (isVideoPage()) {
+      setTimeout(() => {
+        waitForElement('#top-level-buttons-computed', initializeButton);
+      }, 4000); // 4 saniyelik gecikme
+    }
+  }
+}, 500); // URL değişikliklerini her 500 ms’de kontrol et
+Sonuç: SPA navigasyonuyla daha iyi başa çıkıldı ve düğme her zaman doğru sayfada göründü.
+5. Sayfa Yenileme Eklendi (location.reload):
+Neden: SPA zamanlama sorunlarını kesin çözmek için.
+Ne Yapıldı:
+javascript
+Kodu kopyala
+if (isVideoPage()) {
+  console.log("Navigating to video page, forcing reload...");
+  location.reload();
+}
+Sonuç: Sayfa tamamen yeniden yüklendiği için DOM eksikliklerinden kaynaklanan hatalar ortadan kalktı.
+    Son Kod:
+Tüm geliştirmeler birleştirildi:
+isVideoPage ile bağlam farkındalığı.
+Asenkron DOM güncellemeleri için setTimeout ile gecikme.
+DOM elemanları için daha güvenilir waitForElement.
+SPA navigasyonu için geliştirilmiş URL izleme.
+Kesin çözüm için sayfa yenileme (location.reload).
+Bu Değişiklikler Neden Yapıldı?
+YouTube’un SPA Yapısını Yönetmek İçin:
+
+YouTube’un DOM’u tam sayfa yenilemeden değiştirmesi, geleneksel yöntemlerin yetersiz kalmasına neden oldu. Bu sorunları çözmek için SPA’ya uyumlu çözümler geliştirildi.
+Erken Yükleme veya Çakışmaları Önlemek İçin:
+
+Düğmenin yanlış yerlerde görünmesini ve çakışmaları engellemek için bağlam kontrolü ve zamanlama iyileştirildi.
+Tutarlılık Sağlamak İçin:
+
+Her senaryoda (ilk yükleme, SPA navigasyonu) düğmenin güvenilir şekilde görünmesini garanti etmek için sayfa yenileme eklendi.
+Sonuç:
+Bu değişikliklerle düğme artık:
+
+Yalnızca video sayfalarında görünüyor.
+Her zaman doğru zamanda yükleniyor.
+Ana sayfadan video seçildiğinde bile tutarlı çalışıyor.
